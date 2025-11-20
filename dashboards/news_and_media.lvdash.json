@@ -697,12 +697,16 @@
                   "fieldName": "count(source_name)",
                   "scale": {
                     "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": " "
                   }
                 },
                 "color": {
                   "fieldName": "source_name",
                   "legend": {
-                    "position": "left"
+                    "position": "left",
+                    "title": "Sources"
                   },
                   "scale": {
                     "type": "categorical"
@@ -710,7 +714,8 @@
                 }
               },
               "frame": {
-                "showTitle": true
+                "showTitle": true,
+                "title": "Article Distribution by Source"
               }
             }
           },
@@ -943,7 +948,133 @@
           "position": {
             "x": 1,
             "y": 0,
-            "width": 3,
+            "width": 5,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "1154b6af",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "75ca39e5",
+                  "fields": [
+                    {
+                      "name": "monthly(published_at)",
+                      "expression": "DATE_TRUNC(\"MONTH\", `published_at`)"
+                    },
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "monthly(published_at)",
+                  "displayName": "Published At",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "count(*)",
+                  "displayName": "Number of Articles",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "3da5ebb1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "75ca39e5",
+                  "fields": [
+                    {
+                      "name": "count(*)",
+                      "expression": "COUNT(`*`)"
+                    },
+                    {
+                      "name": "sentiment_strategy",
+                      "expression": "`sentiment_strategy`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "count(*)",
+                  "axis": {
+                    "title": "Articles",
+                    "hideGrid": false,
+                    "hideLabels": false
+                  },
+                  "scale": {
+                    "type": "quantitative",
+                    "reverse": false
+                  }
+                },
+                "y": {
+                  "fieldName": "sentiment_strategy",
+                  "axis": {
+                    "title": "Sentiment Strategy"
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "count(*)",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "scheme",
+                      "scheme": "greenblue"
+                    }
+                  }
+                },
+                "label": {
+                  "show": false
+                }
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 6,
+            "width": 4,
             "height": 6
           }
         }
