@@ -1,0 +1,594 @@
+{
+  "datasets": [
+    {
+      "name": "2e41aad4",
+      "displayName": "stock_dataset",
+      "queryLines": [
+        "select \n",
+        "  stocks.* except(`company_id`),\n",
+        "  companies.ticker\n",
+        "from stocks join companies\n",
+        "on stocks.company_id = companies.id;"
+      ],
+      "catalog": "stock_prediction",
+      "schema": "default"
+    },
+    {
+      "name": "3883fda0",
+      "displayName": "sdd_daily_percentage_change",
+      "queryLines": [
+        "use stock_prediction.default;\n",
+        "\n",
+        "WITH DailyReturns AS (\n",
+        "  SELECT \n",
+        "    t.ticker,\n",
+        "    s.timestamp,\n",
+        "    s.close_price,\n",
+        "    -- Get the previous row's close price for this ticker\n",
+        "    LAG(s.close_price) OVER (PARTITION BY t.ticker ORDER BY s.timestamp) as prev_close\n",
+        "  FROM stocks s\n",
+        "  JOIN companies t ON s.company_id = t.id\n",
+        "),\n",
+        "CalculatedReturns AS (\n",
+        "  SELECT\n",
+        "    ticker,\n",
+        "    -- Calculate percentage change: (Current - Prev) / Prev\n",
+        "    (close_price - prev_close) / prev_close as daily_return\n",
+        "  FROM DailyReturns\n",
+        "  WHERE prev_close IS NOT NULL -- Remove the first day (no previous data)\n",
+        ")\n",
+        "SELECT \n",
+        "  ticker,\n",
+        "  -- Calculate standard deviation of the percentage returns\n",
+        "  STDDEV(daily_return) as volatility_score\n",
+        "FROM CalculatedReturns\n",
+        "GROUP BY ticker\n",
+        "-- Order by ASC to find the LOWEST risk\n",
+        "ORDER BY volatility_score ASC;"
+      ]
+    },
+    {
+      "name": "95a9e752",
+      "displayName": "Untitled dataset",
+      "queryLines": [
+        "use stocks_prediction.default;\n",
+        "\n",
+        "select \n",
+        "  stocks.* except(`company_id`),\n",
+        "  companies.ticker\n",
+        "from stocks join companies\n",
+        "on stocks.company_id = companies.id;"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "76032326",
+      "displayName": "summary",
+      "layout": [
+        {
+          "widget": {
+            "name": "13d9e73d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "2e41aad4",
+                  "fields": [
+                    {
+                      "name": "count(ticker)",
+                      "expression": "COUNT(`ticker`)"
+                    },
+                    {
+                      "name": "ticker",
+                      "expression": "`ticker`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "count(ticker)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": " "
+                  }
+                },
+                "color": {
+                  "fieldName": "ticker",
+                  "legend": {
+                    "position": "left",
+                    "title": "Tickers"
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Distribution of Stocks by Tickers"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 2,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "05a4e279",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "2e41aad4",
+                  "fields": [
+                    {
+                      "name": "avg(close_price)",
+                      "expression": "AVG(`close_price`)"
+                    },
+                    {
+                      "name": "ticker",
+                      "expression": "`ticker`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "avg(close_price)",
+                  "format": {
+                    "type": "number-currency",
+                    "currencyCode": "USD",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "axis": {
+                    "title": "Average Close Price"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "ticker",
+                  "displayName": "Tickers",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 10,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "8e4f8500",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "3883fda0",
+                  "fields": [
+                    {
+                      "name": "volatility_score",
+                      "expression": "`volatility_score`"
+                    },
+                    {
+                      "name": "ticker",
+                      "expression": "`ticker`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "volatility_score",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "axis": {
+                    "title": "Volatility Score"
+                  },
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "ticker",
+                  "axis": {
+                    "title": "Companies"
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x"
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "volatility_score",
+                  "format": {
+                    "type": "number-plain",
+                    "abbreviation": "compact",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "displayName": "Volatility",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "scheme",
+                      "scheme": "greenblue"
+                    },
+                    "reverse": false
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Stock Stability Ranking: Lowest Volatility by Company",
+                "showDescription": true,
+                "description": "It shows the standard deviation of daily returns"
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 16,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "ea0b1a8d",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "2e41aad4",
+                  "fields": [
+                    {
+                      "name": "ticker",
+                      "expression": "`ticker`"
+                    },
+                    {
+                      "name": "daily(timestamp)",
+                      "expression": "DATE_TRUNC(\"DAY\", `timestamp`)"
+                    },
+                    {
+                      "name": "median(close_price)",
+                      "expression": "MEDIAN(`close_price`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "daily(timestamp)",
+                  "scale": {
+                    "type": "temporal"
+                  }
+                },
+                "y": {
+                  "fieldName": "median(close_price)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "ticker",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "AAPL",
+                        "color": "#007BFF"
+                      },
+                      {
+                        "value": "AMD",
+                        "color": "#DC3545"
+                      },
+                      {
+                        "value": "CSCO",
+                        "color": "#28A745"
+                      },
+                      {
+                        "value": "INTC",
+                        "color": "#17A2B8"
+                      },
+                      {
+                        "value": "MCD",
+                        "color": "#FFC107"
+                      },
+                      {
+                        "value": "META",
+                        "color": "#E83E8C"
+                      },
+                      {
+                        "value": "MSFT",
+                        "color": "#FFCC99"
+                      },
+                      {
+                        "value": "NVDA",
+                        "color": "#7ECFAB"
+                      },
+                      {
+                        "value": "ORCL",
+                        "color": "#AF8FE0"
+                      },
+                      {
+                        "value": "QCOM",
+                        "color": "#B3CCFF"
+                      },
+                      {
+                        "value": "SAP",
+                        "color": "#FF99AA"
+                      },
+                      {
+                        "value": "SHEL",
+                        "color": "#A30089"
+                      },
+                      {
+                        "value": "SNOW",
+                        "color": "#BFFF00"
+                      },
+                      {
+                        "value": "TSLA",
+                        "color": "#FD7E14"
+                      }
+                    ]
+                  }
+                }
+              },
+              "frame": {
+                "title": "Close price over time grouped by ticker",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "f367cefa",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "2e41aad4",
+                  "fields": [
+                    {
+                      "name": "sum(volume)",
+                      "expression": "SUM(`volume`)"
+                    },
+                    {
+                      "name": "ticker",
+                      "expression": "`ticker`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "sum(volume)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "ticker",
+                  "axis": {
+                    "title": "Companies"
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "x-reversed"
+                    }
+                  }
+                },
+                "color": {
+                  "fieldName": "sum(volume)",
+                  "displayName": "Sum of Volume",
+                  "scale": {
+                    "type": "quantitative",
+                    "colorRamp": {
+                      "mode": "scheme",
+                      "scheme": "greenblue"
+                    }
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Total Interest by Company"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 16,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
+    },
+    {
+      "name": "7998301b",
+      "displayName": "Global Filters",
+      "layout": [
+        {
+          "widget": {
+            "name": "d598f05a",
+            "queries": [
+              {
+                "name": "dashboards/01f0c645c21d1194a73c000697ed9c51/datasets/01f0c654e01516b791ea63abafca69ca_timestamp",
+                "query": {
+                  "datasetName": "2e41aad4",
+                  "fields": [
+                    {
+                      "name": "timestamp",
+                      "expression": "`timestamp`"
+                    },
+                    {
+                      "name": "timestamp_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "timestamp",
+                    "queryName": "dashboards/01f0c645c21d1194a73c000697ed9c51/datasets/01f0c654e01516b791ea63abafca69ca_timestamp"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Select Date Range"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "bec6c684",
+            "queries": [
+              {
+                "name": "dashboards/01f0c645c21d1194a73c000697ed9c51/datasets/01f0c654e01516b791ea63abafca69ca_ticker",
+                "query": {
+                  "datasetName": "2e41aad4",
+                  "fields": [
+                    {
+                      "name": "ticker",
+                      "expression": "`ticker`"
+                    },
+                    {
+                      "name": "ticker_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "ticker",
+                    "queryName": "dashboards/01f0c645c21d1194a73c000697ed9c51/datasets/01f0c654e01516b791ea63abafca69ca_ticker"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 1,
+            "height": 2
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
