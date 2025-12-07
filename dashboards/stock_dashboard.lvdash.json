@@ -5,7 +5,7 @@
       "displayName": "stock_dataset",
       "queryLines": [
         "select \n",
-        "  stocks.* except(`company_id`),\n",
+        "  stocks.*,\n",
         "  companies.ticker\n",
         "from stocks join companies\n",
         "on stocks.company_id = companies.id;"
@@ -49,15 +49,48 @@
     },
     {
       "name": "95a9e752",
-      "displayName": "Untitled dataset",
+      "displayName": "stock_news_correlation",
       "queryLines": [
-        "use stocks_prediction.default;\n",
+        "WITH \n",
+        "-- Step 1: Aggregate Sentiment by Company and Day\n",
+        "-- We join 'article_sentiment_scored' with 'articles' to get the date.\n",
+        "Daily_Sentiment AS (\n",
+        "    SELECT \n",
+        "        s.company_id,\n",
+        "        to_date(a.published_at) as sentiment_date,\n",
+        "        AVG(s.score) as avg_sentiment_score\n",
+        "    FROM stock_prediction.default.article_sentiment_scored s\n",
+        "    JOIN stock_prediction.default.articles a ON s.article_id = a.id\n",
+        "    GROUP BY s.company_id, to_date(a.published_at)\n",
+        "),\n",
         "\n",
-        "select \n",
-        "  stocks.* except(`company_id`),\n",
-        "  companies.ticker\n",
-        "from stocks join companies\n",
-        "on stocks.company_id = companies.id;"
+        "-- Step 2: Calculate Daily Stock Price Change (%)\n",
+        "-- We calculate how much the stock moved during that trading day.\n",
+        "Daily_Stock_Return AS (\n",
+        "    SELECT \n",
+        "        company_id,\n",
+        "        to_date(timestamp) as trade_date,\n",
+        "        -- Formula: (Close - Open) / Open = Percentage Return\n",
+        "        ((close_price - open_price) / open_price) * 100 as price_change_pct\n",
+        "    FROM stock_prediction.default.stocks\n",
+        ")\n",
+        "\n",
+        "-- Step 3: The \"Lagged\" Join\n",
+        "-- We match Sentiment Date (T) with Trade Date (T+1)\n",
+        "SELECT \n",
+        "    comp.name as company_name,\n",
+        "    sent.sentiment_date as news_date,\n",
+        "    stk.trade_date as market_reaction_date,\n",
+        "    sent.avg_sentiment_score,\n",
+        "    stk.price_change_pct\n",
+        "FROM Daily_Sentiment sent\n",
+        "JOIN Daily_Stock_Return stk \n",
+        "    ON sent.company_id = stk.company_id \n",
+        "    -- This is the logic: Match News Date to the Stock Date of the NEXT day\n",
+        "    AND stk.trade_date = date_add(sent.sentiment_date, 1) \n",
+        "JOIN stock_prediction.default.companies comp \n",
+        "    ON sent.company_id = comp.id\n",
+        "ORDER BY sent.sentiment_date DESC;"
       ]
     }
   ],
@@ -580,9 +613,124 @@
             "width": 1,
             "height": 2
           }
+        },
+        {
+          "widget": {
+            "name": "2ee8ec3f",
+            "queries": [
+              {
+                "name": "dashboards/01f0c645c21d1194a73c000697ed9c51/datasets/01f0c96e57861b5580462863980b29da_company_name",
+                "query": {
+                  "datasetName": "95a9e752",
+                  "fields": [
+                    {
+                      "name": "company_name",
+                      "expression": "`company_name`"
+                    },
+                    {
+                      "name": "company_name_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "company_name",
+                    "queryName": "dashboards/01f0c645c21d1194a73c000697ed9c51/datasets/01f0c96e57861b5580462863980b29da_company_name"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Company"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 1,
+            "height": 2
+          }
         }
       ],
       "pageType": "PAGE_TYPE_GLOBAL_FILTERS"
+    },
+    {
+      "name": "a55c8c66",
+      "displayName": "sentiment_analysis",
+      "layout": [
+        {
+          "widget": {
+            "name": "9402dbb0",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "95a9e752",
+                  "fields": [
+                    {
+                      "name": "company_name",
+                      "expression": "`company_name`"
+                    },
+                    {
+                      "name": "avg_sentiment_score",
+                      "expression": "`avg_sentiment_score`"
+                    },
+                    {
+                      "name": "price_change_pct",
+                      "expression": "`price_change_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "avg_sentiment_score",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "price_change_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "company_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "title": "Correlation between Avg Sentiment Score and Price Change Percentage",
+                "showTitle": true
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 10
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS"
     }
   ],
   "uiSettings": {
